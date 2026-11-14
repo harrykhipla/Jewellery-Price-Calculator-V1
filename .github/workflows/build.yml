@@ -1,0 +1,41 @@
+name: Build iPhone app (unsigned IPA)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Get code
+        uses: actions/checkout@v4
+
+      - name: Build (no code signing)
+        run: |
+          PROJ=$(find . -maxdepth 3 -name "OmGanpati.xcodeproj" | head -1)
+          echo "Project found at: $PROJ"
+          xcodebuild \
+            -project "$PROJ" \
+            -target OmGanpati \
+            -configuration Release \
+            -sdk iphoneos \
+            SYMROOT="$PWD/build" \
+            IPHONEOS_DEPLOYMENT_TARGET=16.0 \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Make IPA
+        run: |
+          mkdir Payload
+          cp -R build/Release-iphoneos/OmGanpati.app Payload/
+          zip -qr OmGanpati.ipa Payload
+
+      - name: Save IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: OmGanpati-ipa
+          path: OmGanpati.ipa
